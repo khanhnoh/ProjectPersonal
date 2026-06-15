@@ -13,6 +13,7 @@ return [
     'key' => env('APP_KEY'),
     'cipher' => 'AES-256-CBC',
     'providers' => [
+        App\Providers\Filament\AdminPanelProvider::class,
         Illuminate\Auth\AuthServiceProvider::class,
         Illuminate\Broadcasting\BroadcastServiceProvider::class,
         Illuminate\Bus\BusServiceProvider::class,
