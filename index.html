@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SAP Sales Hub</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React + ReactDOM + Babel (chạy JSX trực tiếp, không cần build) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    body { background: #f1f5f9; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    /* ---------- Hằng số cấu hình ---------- */
+    const STORAGE_KEY = "sap-sales-hub:v1";
+
+    const SAP_MODULES = ["FI", "CO", "MM", "SD", "PP", "HCM", "WM", "QM", "S/4HANA"];
+    const SCALES = ["Nhỏ", "Vừa", "Lớn"];
+
+    const SCALE_STYLE = {
+      "Nhỏ":  "bg-slate-100 text-slate-700",
+      "Vừa":  "bg-amber-100 text-amber-700",
+      "Lớn":  "bg-emerald-100 text-emerald-700",
+    };
+
+    /* ---------- Icon: bọc Lucide UMD thành component React ---------- */
+    function Icon({ name, className = "", size = 18 }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (ref.current && window.lucide) {
+          ref.current.innerHTML = "";
+          const el = document.createElement("i");
+          el.setAttribute("data-lucide", name);
+          ref.current.appendChild(el);
+          window.lucide.createIcons({
+            attrs: { width: size, height: size, class: className },
+            nameAttr: "data-lucide",
+          });
+        }
+      }, [name, className, size]);
+      return <span ref={ref} className="inline-flex" />;
+    }
+
+    /* ---------- Lưu / đọc LocalStorage ---------- */
+    function loadLeads() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    /* ---------- Thẻ thống kê Dashboard ---------- */
+    function StatCard({ icon, label, value, accent }) {
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-center gap-4 shadow-sm">
+          <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${accent}`}>
+            <Icon name={icon} size={22} />
+          </div>
+          <div>
+            <div className="text-2xl font-semibold text-slate-800">{value}</div>
+            <div className="text-sm text-slate-500">{label}</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------- Form thêm Lead ---------- */
+    function LeadForm({ onAdd }) {
+      const [name, setName] = useState("");
+      const [module, setModule] = useState(SAP_MODULES[0]);
+      const [scale, setScale] = useState(SCALES[1]);
+
+      function submit(e) {
+        e.preventDefault();
+        if (!name.trim()) return;
+        onAdd({
+          id: Date.now(),
+          name: name.trim(),
+          module,
+          scale,
+          createdAt: new Date().toISOString(),
+        });
+        setName("");
+        setModule(SAP_MODULES[0]);
+        setScale(SCALES[1]);
+      }
+
+      const field = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+      const labelCls = "block text-sm font-medium text-slate-600 mb-1";
+
+      return (
+        <form onSubmit={submit} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <Icon name="user-plus" size={18} /> Thêm Lead mới
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls}>Tên KH</label>
+              <input
+                className={field}
+                placeholder="VD: Công ty ABC"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Phân hệ SAP</label>
+              <select className={field} value={module} onChange={(e) => setModule(e.target.value)}>
+                {SAP_MODULES.map((m) => <option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Quy mô</label>
+              <select className={field} value={scale} onChange={(e) => setScale(e.target.value)}>
+                {SCALES.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+          >
+            <Icon name="plus" size={16} /> Lưu Lead
+          </button>
+        </form>
+      );
+    }
+
+    /* ---------- Bảng danh sách Lead ---------- */
+    function LeadTable({ leads, onDelete }) {
+      if (leads.length === 0) {
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 shadow-sm">
+            <div className="flex justify-center mb-2"><Icon name="inbox" size={32} /></div>
+            Chưa có lead nào. Hãy thêm lead đầu tiên ở trên.
+          </div>
+        );
+      }
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th className="px-5 py-3 font-medium">Tên KH</th>
+                <th className="px-5 py-3 font-medium">Phân hệ SAP</th>
+                <th className="px-5 py-3 font-medium">Quy mô</th>
+                <th className="px-5 py-3 font-medium">Ngày tạo</th>
+                <th className="px-5 py-3 font-medium text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {leads.map((l) => (
+                <tr key={l.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-3 font-medium text-slate-800">{l.name}</td>
+                  <td className="px-5 py-3">
+                    <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2 py-1 rounded">{l.module}</span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${SCALE_STYLE[l.scale] || "bg-slate-100"}`}>{l.scale}</span>
+                  </td>
+                  <td className="px-5 py-3 text-slate-500">
+                    {new Date(l.createdAt).toLocaleDateString("vi-VN")}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      onClick={() => onDelete(l.id)}
+                      className="text-slate-400 hover:text-red-600 transition"
+                      title="Xóa"
+                    >
+                      <Icon name="trash-2" size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ---------- App chính ---------- */
+    function App() {
+      const [leads, setLeads] = useState(loadLeads);
+
+      // Lưu LocalStorage mỗi khi danh sách thay đổi
+      useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+      }, [leads]);
+
+      const stats = useMemo(() => ({
+        total: leads.length,
+        large: leads.filter((l) => l.scale === "Lớn").length,
+        modules: new Set(leads.map((l) => l.module)).size,
+      }), [leads]);
+
+      function addLead(lead) { setLeads((prev) => [lead, ...prev]); }
+      function deleteLead(id) { setLeads((prev) => prev.filter((l) => l.id !== id)); }
+
+      function exportJSON() {
+        const blob = new Blob([JSON.stringify(leads, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `sap-sales-hub-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      return (
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+            <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                  <Icon name="layout-dashboard" size={20} />
+                </div>
+                <div>
+                  <h1 className="font-semibold text-slate-800 leading-tight">SAP Sales Hub</h1>
+                  <p className="text-xs text-slate-400">Quản lý dự án &amp; cơ hội bán hàng</p>
+                </div>
+              </div>
+              <button
+                onClick={exportJSON}
+                className="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2 rounded-lg transition"
+              >
+                <Icon name="download" size={16} /> Export JSON
+              </button>
+            </div>
+          </header>
+
+          <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+            {/* Dashboard */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Dashboard</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard icon="users" label="Tổng số Lead" value={stats.total} accent="bg-blue-50 text-blue-600" />
+                <StatCard icon="trending-up" label="Quy mô Lớn" value={stats.large} accent="bg-emerald-50 text-emerald-600" />
+                <StatCard icon="layers" label="Phân hệ SAP" value={stats.modules} accent="bg-violet-50 text-violet-600" />
+              </div>
+            </section>
+
+            {/* Lead Management */}
+            <section className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Lead Management</h2>
+              <LeadForm onAdd={addLead} />
+              <LeadTable leads={leads} onDelete={deleteLead} />
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
