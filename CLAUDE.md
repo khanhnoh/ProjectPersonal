@@ -4,140 +4,223 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-**SAP Sales Hub** is a single-file React application for managing SAP projects and sales opportunities. The entire app runs in `index.html` using CDN-loaded dependencies—**no build step, npm, or bundler needed**.
+**SAP Sales Hub** — Laravel 12 admin web application cho quản lý dự án & cơ hội bán hàng SAP.
 
-- **Entry point**: `index.html` (320+ lines of HTML + embedded React JSX)
-- **Runtime**: Browser, via `<script type="text/babel">` with Babel standalone
-- **Framework**: React 18 (UMD), Tailwind CSS, Lucide Icons (all CDN)
-- **State**: React hooks + LocalStorage persistence
-- **Data key**: `sap-sales-hub:v1` (JSON-serialized leads array)
+**Tech Stack (TALL):**
+- **T**ailwind CSS — styling
+- **A**lpine.js — lightweight JS interactions
+- **L**ivewire 3 — reactive components
+- **L**aravel 12 + **Filament v4** — framework + admin UI
+
+**Environment:** Laragon (PHP 8.3, MySQL 8.0, Composer)
+**URL khi dev:** `http://localhost:8000/admin`
+**Login:** `admin@example.com` / `password`
+
+---
 
 ## Running the App
 
-**Quick start:**
 ```bash
-# Just open in browser (double-click index.html)
-# OR use a static server:
-python -m http.server 8000
-# Then visit http://localhost:8000
+# Double-click START.bat
+# hoặc chạy thủ công:
+cd "D:\Claude for work\Project personal"
+php artisan serve
 ```
 
-Requires internet on first run to load React, Tailwind, and Lucide from CDN.
+---
 
-## Code Architecture (`index.html`)
+## Development Rules
 
-The `<script type="text/babel">` section is organized as:
+> Chi tiết đầy đủ ở `.claude/rules.md`
 
-1. **Constants** — storage key, SAP module list (FI, CO, MM, SD, PP, HCM, WM, QM, S/4HANA), scale options (Nhỏ/Vừa/Lớn), styling maps.
-2. **Utilities**
-   - `Icon(name, className, size)` — wraps Lucide UMD icons into React components.
-   - `loadLeads()` — reads from LocalStorage, returns array or `[]`.
-3. **UI Components** (function-based, no external files)
-   - `StatCard` — dashboard stat box (icon + label + value).
-   - `LeadForm` — form to add new lead (Tên KH, Phân hệ SAP, Quy mô).
-   - `LeadTable` — renders lead rows with delete button.
-   - `App` — main component (state management, LocalStorage sync, export JSON).
+### Rule 1 — Module Architecture (Clean & Upgradeable)
 
-### Key Patterns
+**Không bao giờ overwrite `vendor/`, `bootstrap/cache/`, framework internals.**
 
-**LocalStorage sync:**
-```javascript
-useEffect(() => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-}, [leads]);
+Mỗi module tổ chức theo cấu trúc:
 ```
-Leads auto-persist whenever the array changes.
+app/
+├── Filament/Resources/{Module}/        ← Filament UI (Resource, Pages, Widgets)
+│   ├── Schemas/                        ← Tách Form & Table schema nếu > 300 dòng
+├── Http/Controllers/{Module}/          ← Thin controllers, chỉ gọi Service
+├── Livewire/{Module}/                  ← Livewire components cho complex pages
+├── Models/                             ← Eloquent models
+├── Services/{Module}Service.php        ← Business logic
+└── Actions/{Module}/                   ← Single-purpose action classes
 
-**Icon integration:**
-```javascript
-function Icon({ name, className, size }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (ref.current && window.lucide) {
-      // Renders Lucide icon dynamically into DOM
-      ref.current.innerHTML = "";
-      const el = document.createElement("i");
-      el.setAttribute("data-lucide", name);
-      ref.current.appendChild(el);
-      window.lucide.createIcons({ ... });
-    }
-  }, [name, className, size]);
-  return <span ref={ref} className="inline-flex" />;
-}
-```
-Uses Lucide's UMD API to render icons after component mount.
+resources/views/
+├── livewire/{module}/                  ← Blade views cho Livewire components
+└── filament/{module}/                  ← Custom Filament view overrides (nếu cần)
 
-**Export JSON:**
-```javascript
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(leads, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `sap-sales-hub-${date}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-```
-Creates and downloads a timestamped JSON file.
-
-## Adding New Modules
-
-The app is designed for future modules (Opportunity, Quotation, Project Tracking). To add a new module:
-
-1. Define constants at the top (module name, fields, styling).
-2. Create UI components (Form, Table) following the Lead pattern.
-3. Extend `App` state to include new entity (e.g., `opportunities`).
-4. Add LocalStorage key for the new entity.
-5. Add new section in the Dashboard and main area.
-6. Update export to include all entities.
-
-Example for Opportunity module:
-```javascript
-// Add to App state
-const [opportunities, setOpportunities] = useState(loadOpportunities);
-
-// Add to export
-function exportJSON() {
-  const data = { leads, opportunities, // ... more entities
-  };
-  // ... create and download
-}
+tests/
+├── Unit/{Module}/                      ← Unit tests
+└── Feature/{Module}/                   ← Feature/HTTP tests
 ```
 
-## Tailwind & Icon Classes
+### Rule 2 — TALL Stack cho Complex Pages
 
-- **Tailwind**: Via CDN `<script src="https://cdn.tailwindcss.com"></script>`. All utility classes available (grid, flex, hover states, etc.).
-- **Lucide icons**: Via `<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>`. Use icon names directly in the `Icon` component (e.g., `<Icon name="plus" />`).
+Dùng **Livewire + Alpine.js** khi:
+- Page cần real-time (live search, dynamic fields, counter)
+- Layout không fit Filament default (Gantt chart, Kanban)
+- Custom dashboard widgets
 
-## LocalStorage Data Shape
+Livewire components có thể **embed vào Filament** qua `@livewire()` hoặc custom Filament Page.
 
-```json
-[
-  {
-    "id": 1718470800000,
-    "name": "Công ty ABC",
-    "module": "FI",
-    "scale": "Lớn",
-    "createdAt": "2026-06-15T14:13:20.000Z"
-  }
-]
+### Rule 3 — File Size ≤ 300 dòng
+
+- Nếu file vượt 300 dòng → tách nhỏ:
+  - Controller → Action classes hoặc Service methods
+  - Filament Resource → tách `FormSchema` và `TableSchema` thành trait riêng
+  - Model → dùng traits cho từng nhóm method
+
+### Rule 4 — TDD: Plan → Test → Code
+
+**Bắt buộc với mọi feature mới:**
+
+```
+1. Viết plan  →  .claude/plans/{feature}.md
+2. Viết test  →  tests/Unit hoặc tests/Feature
+3. Chạy test  →  ❌ fail (expected)
+4. Viết code  →  ✅ pass
+5. Refactor   →  tests vẫn pass
 ```
 
-To inspect/clear in DevTools: `localStorage.getItem('sap-sales-hub:v1')` or `localStorage.removeItem('sap-sales-hub:v1')`.
+```bash
+php artisan test                         # Chạy tất cả tests
+php artisan test --filter=LeadTest       # Chạy test một module
+php artisan test tests/Feature/Leads/    # Chạy test một folder
+```
 
-## Development Notes
+### Rule 5 — Feature Comments
 
-- **No hot-reload**: Changes require browser refresh. For rapid iteration, edit `index.html`, save, and reload the page.
-- **No TypeScript**: Plain JavaScript. Type hints can be added via JSDoc if needed.
-- **No testing framework**: Manually test features in the browser or refactor to use a test runner if scope grows.
-- **CDN reliability**: The app requires internet to load React, Tailwind, and Lucide. For offline use, consider downloading and serving files locally.
-- **Browser DevTools**: Use Console to inspect state (`localStorage`), and React DevTools extension for component debugging.
+Mỗi file PHP bắt đầu bằng docblock:
 
-## Future Improvements
+```php
+<?php
+/**
+ * Module: Lead & Scope Management (Module 1)
+ * Feature: Lead creation, status tracking, scope linking
+ * Related: Scope, BANTAssessment
+ */
+```
 
-Per README:
-- Search / filter / sort leads.
-- Import JSON to restore data.
-- Add Opportunity, Quotation, Project Tracking modules.
-- Consider migrating to a proper build setup (Vite + npm) once complexity grows beyond single-file limits.
+Comment chỉ cho WHY (không phải WHAT). Không comment code self-evident.
+
+---
+
+## Code Architecture
+
+### Filament Admin Panel
+
+- **Route:** `/admin`
+- **Provider:** `app/Providers/Filament/AdminPanelProvider.php`
+- **Resources:** `app/Filament/Resources/`
+- **Theme:** Blue (Color::Blue)
+
+Filament auto-discovers resources trong `app/Filament/Resources/` — chỉ cần tạo file, không cần register.
+
+### 5 Business Modules
+
+| # | Module | Models | Filament Resource |
+|---|--------|--------|-------------------|
+| 1 | Lead & Scope Management | `Lead`, `Scope` | `LeadResource`, `ScopeResource` |
+| 2 | BANT Qualification | `BANTAssessment` | `BANTAssessmentResource` |
+| 3 | Effort & Cost Estimation | `EffortEstimation`, `CostEstimation` | `EffortEstimationResource`, `CostEstimationResource` |
+| 4 | Timeline & Resources | `Timeline`, `ResourceAllocation` | `TimelineResource`, `ResourceAllocationResource` |
+| 5 | Artifacts & Pitching | `Artifact`, `PitchingChecklist` | `ArtifactResource`, `PitchingChecklistResource` |
+
+### Model Relationships
+
+```
+Lead ──< Scope ──< EffortEstimation
+    \       ├──< CostEstimation (1 per scope)
+     \      ├──< Timeline ──< ResourceAllocation
+      \     ├──< Artifact
+      └─── └──< PitchingChecklist
+Lead ──< BANTAssessment (1 per lead)
+```
+
+### Key Artisan Commands
+
+```bash
+# Filament
+php artisan make:filament-resource {Model} --generate  # Tạo resource với form & table
+php artisan make:filament-page {Name}                  # Tạo custom page
+php artisan make:filament-widget {Name}                # Tạo widget
+php artisan filament:upgrade                           # Upgrade Filament assets
+
+# Livewire
+php artisan make:livewire {Module}/{ComponentName}     # Tạo Livewire component
+
+# Laravel
+php artisan make:model {Name} -m                       # Model + migration
+php artisan make:service {Name}Service                 # Service class (manual)
+php artisan migrate                                    # Chạy migrations
+php artisan migrate:fresh --seed                       # Reset DB + seed
+
+# Testing
+php artisan test
+php artisan test --filter={TestClass}
+php artisan test --coverage                            # Coverage report
+```
+
+### Database
+
+- **Connection:** MySQL, DB name `sap_admin_hub`
+- **Migrations:** `database/migrations/` — sorted by timestamp
+- **Seeder:** `database/seeders/DatabaseSeeder.php` — seeds default admin user
+- **Inspect (DevTools):** Laragon → MySQL → phpMyAdmin
+
+---
+
+## Upgrade Guide
+
+### Upgrade Filament
+
+```bash
+composer update filament/filament
+php artisan filament:upgrade
+```
+
+### Upgrade Laravel
+
+```bash
+composer update laravel/framework
+php artisan migrate
+```
+
+Vì không overwrite vendor/ hay core files, upgrade chỉ cần 2 lệnh trên.
+
+---
+
+## File Structure Quick Reference
+
+```
+D:\Claude for work\Project personal\
+├── app/
+│   ├── Filament/Resources/     ← 9 Filament resources (auto-discovered)
+│   ├── Http/Controllers/       ← Thin controllers
+│   ├── Livewire/               ← Complex UI components (TALL)
+│   ├── Models/                 ← Eloquent models với relationships
+│   ├── Providers/Filament/     ← AdminPanelProvider
+│   └── Services/               ← Business logic layer
+├── database/
+│   ├── migrations/             ← 10 migration files
+│   └── seeders/
+├── resources/views/
+│   ├── auth/login.blade.php
+│   ├── livewire/               ← Livewire Blade views
+│   └── layouts/app.blade.php
+├── routes/
+│   ├── web.php                 ← Web routes (auth-protected)
+│   └── auth.php                ← Login/logout routes
+├── tests/
+│   ├── Unit/                   ← Unit tests per module
+│   └── Feature/                ← Feature tests per module
+├── .claude/
+│   ├── rules.md                ← Development rules (chi tiết)
+│   └── settings.local.json     ← Claude permissions
+├── START.bat                   ← One-click server start
+├── artisan                     ← Laravel CLI
+└── CLAUDE.md                   ← This file
+```
