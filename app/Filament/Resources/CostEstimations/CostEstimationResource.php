@@ -18,7 +18,10 @@ class CostEstimationResource extends Resource
 {
     protected static ?string $model = CostEstimation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 2 · Scope & Estimation';
+    protected static ?string $navigationLabel = 'Cost Estimation';
+    protected static ?int $navigationSort = 5;
 
     public static function form(Schema $schema): Schema
     {
@@ -46,3 +49,4 @@ class CostEstimationResource extends Resource
         ];
     }
 }
+

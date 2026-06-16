@@ -18,7 +18,10 @@ class EffortEstimationResource extends Resource
 {
     protected static ?string $model = EffortEstimation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 2 · Scope & Estimation';
+    protected static ?string $navigationLabel = 'Effort Estimation';
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {
@@ -46,3 +49,4 @@ class EffortEstimationResource extends Resource
         ];
     }
 }
+

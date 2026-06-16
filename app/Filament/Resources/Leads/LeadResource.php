@@ -18,13 +18,9 @@ class LeadResource extends Resource
 {
     protected static ?string $model = Lead::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
-
-    protected static ?string $navigationLabel = 'Leads';
-
-    // UnitEnum|string|null khớp với type parent Filament\Resources\Resource
-    protected static \UnitEnum|string|null $navigationGroup = 'Pipeline Management';
-
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 1 · Lead & BANT';
+    protected static ?string $navigationLabel = 'Lead Management';
     protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema

@@ -18,7 +18,10 @@ class ArtifactResource extends Resource
 {
     protected static ?string $model = Artifact::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-paper-clip';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 4 · Pitching';
+    protected static ?string $navigationLabel = 'Artifacts';
+    protected static ?int $navigationSort = 8;
 
     public static function form(Schema $schema): Schema
     {
@@ -46,3 +49,4 @@ class ArtifactResource extends Resource
         ];
     }
 }
+

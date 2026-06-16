@@ -18,7 +18,10 @@ class TimelineResource extends Resource
 {
     protected static ?string $model = Timeline::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 3 · Timeline';
+    protected static ?string $navigationLabel = 'Timeline';
+    protected static ?int $navigationSort = 6;
 
     public static function form(Schema $schema): Schema
     {
@@ -46,3 +49,4 @@ class TimelineResource extends Resource
         ];
     }
 }
+

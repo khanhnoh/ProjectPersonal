@@ -18,7 +18,10 @@ class ScopeResource extends Resource
 {
     protected static ?string $model = Scope::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\UnitEnum|null $navigationGroup = 'Step 2 · Scope & Estimation';
+    protected static ?string $navigationLabel = 'Scope Matrix';
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema
     {
@@ -46,3 +49,4 @@ class ScopeResource extends Resource
         ];
     }
 }
+
