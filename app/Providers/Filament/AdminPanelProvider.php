@@ -34,14 +34,10 @@ class AdminPanelProvider extends PanelProvider
                 'gray'    => Color::Slate,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Step 1 · Lead & BANT')
-                    ->icon('heroicon-o-funnel'),
-                NavigationGroup::make('Step 2 · Scope & Estimation')
-                    ->icon('heroicon-o-document-magnifying-glass'),
-                NavigationGroup::make('Step 3 · Timeline')
-                    ->icon('heroicon-o-calendar-days'),
-                NavigationGroup::make('Step 4 · Pitching')
-                    ->icon('heroicon-o-presentation-chart-line'),
+                NavigationGroup::make('Step 1 · Lead & BANT'),
+                NavigationGroup::make('Step 2 · Scope & Estimation'),
+                NavigationGroup::make('Step 3 · Timeline'),
+                NavigationGroup::make('Step 4 · Pitching'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
